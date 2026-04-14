@@ -3,7 +3,7 @@ import streamlit as st
 import pandas as pd
 from datetime import datetime
 
-from core.parser import parse_market_text
+from parser import parse_market_text
 from core.engine import analyze_market
 from core.database import init_db, save_analysis, load_recent
 from core.ui import inject_css, render_header_cards, render_section_table, render_summary_box, render_traps, render_probabilities
