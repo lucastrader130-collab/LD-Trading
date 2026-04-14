@@ -1,7 +1,5 @@
-
 import streamlit as st
 import pandas as pd
-from datetime import datetime
 
 from parser import parse_market_text
 from engine import analyze_market
@@ -42,62 +40,77 @@ with st.sidebar:
     st.write("14:30–15:00 · Releitura EUA")
 
 default_text = ""
-raw_text = st.text_area("Cole aqui os dados do mercado", value=default_text, height=360, placeholder="Cole o texto bruto do painel aqui...")
+raw_text = st.text_area(
+    "Cole aqui os dados do mercado",
+    value=default_text,
+    height=360,
+    placeholder="Cole o texto bruto do painel aqui..."
+)
 
 analyze = st.button("Analisar mercado", use_container_width=True, type="primary")
 
-if analyze and raw_text.strip():
-    parsed = parse_market_text(raw_text)
-    result = analyze_market(parsed)
+if analyze:
+    if not raw_text.strip():
+        st.warning("Cole os dados do mercado antes de analisar.")
+    else:
+        try:
+            parsed = parse_market_text(raw_text)
+            result = analyze_market(parsed)
 
-    save_analysis(
-        timestamp=result["meta"]["timestamp"],
-        regime=result["regime"],
-        bias_win=result["bias"]["win_label"],
-        bias_wdo=result["bias"]["wdo_label"],
-        confidence=result["confidence"],
-        raw_text=raw_text,
-        summary=result["executive_summary"],
-    )
+            save_analysis(
+                timestamp=result["meta"]["timestamp"],
+                regime=result["regime"],
+                bias_win=result["bias"]["win_label"],
+                bias_wdo=result["bias"]["wdo_label"],
+                confidence=result["confidence"],
+                raw_text=raw_text,
+                summary=result["executive_summary"],
+            )
 
-    render_header_cards(result)
+            render_header_cards(result)
 
-    col_a, col_b = st.columns([1.35, 1], gap="large")
-    with col_a:
-        render_summary_box("Leitura macro", result["macro_summary"])
-        render_summary_box("Plano operacional", result["operational_plan"])
-        render_traps(result["traps"])
-    with col_b:
-        render_probabilities(result["probabilities"])
-        render_summary_box("Invalidação do cenário", result["invalidation"])
-        render_summary_box("Resumo executivo", result["executive_summary"])
+            col_a, col_b = st.columns([1.35, 1], gap="large")
+            with col_a:
+                render_summary_box("Leitura macro", result["macro_summary"])
+                render_summary_box("Plano operacional", result["operational_plan"])
+                render_traps(result["traps"])
+            with col_b:
+                render_probabilities(result["probabilities"])
+                render_summary_box("Invalidação do cenário", result["invalidation"])
+                render_summary_box("Resumo executivo", result["executive_summary"])
 
-    st.markdown("### Mapa dos dados lidos")
-    sec1, sec2 = st.columns(2, gap="large")
-    with sec1:
-        render_section_table("Estados Unidos e risco", parsed["tables"]["macro_us"])
-        render_section_table("Brasil e correlação", parsed["tables"]["brazil"])
-    with sec2:
-        render_section_table("Europa e Ásia", parsed["tables"]["world"])
-        render_section_table("Commodities e moedas", parsed["tables"]["commod_fx"])
+            st.markdown("### Mapa dos dados lidos")
+            sec1, sec2 = st.columns(2, gap="large")
+            with sec1:
+                render_section_table("Estados Unidos e risco", parsed["tables"]["macro_us"])
+                render_section_table("Brasil e correlação", parsed["tables"]["brazil"])
+            with sec2:
+                render_section_table("Europa e Ásia", parsed["tables"]["world"])
+                render_section_table("Commodities e moedas", parsed["tables"]["commod_fx"])
 
-    st.markdown("### Diagnóstico interno")
-    diag = pd.DataFrame(
-        [
-            {"Métrica": "Score WIN", "Valor": result["scores"]["win_score"]},
-            {"Métrica": "Score WDO", "Valor": result["scores"]["wdo_score"]},
-            {"Métrica": "Score Macro", "Valor": result["scores"]["macro_score"]},
-            {"Métrica": "Força da virada", "Valor": result["scores"]["turn_strength"]},
-            {"Métrica": "Regime", "Valor": result["regime"]},
-            {"Métrica": "Confiança", "Valor": result["confidence"]},
-        ]
-    )
-    st.dataframe(diag, use_container_width=True, hide_index=True)
+            st.markdown("### Diagnóstico interno")
+            diag = pd.DataFrame(
+                [
+                    {"Métrica": "Score WIN", "Valor": result["scores"]["win_score"]},
+                    {"Métrica": "Score WDO", "Valor": result["scores"]["wdo_score"]},
+                    {"Métrica": "Score Macro", "Valor": result["scores"]["macro_score"]},
+                    {"Métrica": "Força da virada", "Valor": result["scores"]["turn_strength"]},
+                    {"Métrica": "Regime", "Valor": result["regime"]},
+                    {"Métrica": "Confiança", "Valor": result["confidence"]},
+                ]
+            )
+            st.dataframe(diag, use_container_width=True, hide_index=True)
+
+        except Exception as e:
+            st.error(f"Erro ao analisar o mercado: {e}")
 
 st.markdown("### Histórico recente")
 recent = load_recent(limit=8)
 if recent:
-    hist = pd.DataFrame(recent, columns=["Horário", "Regime", "Viés WIN", "Viés WDO", "Confiança", "Resumo"])
+    hist = pd.DataFrame(
+        recent,
+        columns=["Horário", "Regime", "Viés WIN", "Viés WDO", "Confiança", "Resumo"]
+    )
     st.dataframe(hist, use_container_width=True, hide_index=True)
 else:
     st.info("Ainda não há leituras salvas nesta instalação.")
